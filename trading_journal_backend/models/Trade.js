@@ -15,6 +15,11 @@ const TradeSchema = new Schema({
         required: true,
         enum: ['stock', 'option'] 
     },
+    position: {
+        type: String,
+        required: true,
+        enum: ['long', 'short'] 
+    },
     entryDate: {
         type: Date,
         required: true

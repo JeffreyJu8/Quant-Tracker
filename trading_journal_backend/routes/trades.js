@@ -7,20 +7,20 @@ const Trade = require('../models/Trade');
 router.post('/', auth, async (req, res) => {
     try {
         const {
-            symbol, 
-            type, 
-            entryDate, 
-            exitDate, 
-            expirationDate, 
-            strikePrice, 
-            quantity, 
-            fillPrice, 
-            closePrice, 
-            fee, 
-            pl
+            symbol,
+            type,
+            position,
+            entryDate,
+            exitDate,
+            expirationDate,
+            strikePrice,
+            quantity,
+            fillPrice,
+            closePrice,
+            fee
         } = req.body;
 
-        if (!symbol || !type || !entryDate || !exitDate || !quantity || !fillPrice || !closePrice || !fee) {
+        if (!symbol || !type || !position || !entryDate || !exitDate || !quantity || !fillPrice || !closePrice || !fee) {
             return res.status(400).json({ msg: 'Please enter all required fields' });
         }
 
@@ -28,11 +28,24 @@ router.post('/', auth, async (req, res) => {
             return res.status(400).json({ msg: 'Options trades must include expiration date and strike price' });
         }
 
+        // Calculate P/L
+        let calculatedPL = (parseFloat(closePrice) * parseInt(quantity)) - (parseFloat(fillPrice) * parseInt(quantity)) - parseFloat(fee);
+        
+        if (position === 'short') {
+            calculatedPL = -calculatedPL;
+        }
+
+        // Apply *100 multiplication for options
+        if (type === 'option') {
+            calculatedPL *= 100;
+        }
+
         // Create a new trade
         const newTrade = new Trade({
             user: req.user.id,
             symbol,
             type,
+            position,
             entryDate,
             exitDate,
             expirationDate: type === 'option' ? expirationDate : undefined,
@@ -41,7 +54,7 @@ router.post('/', auth, async (req, res) => {
             fillPrice,
             closePrice,
             fee,
-            pl,
+            pl: calculatedPL.toFixed(2), // Round to 2 decimal places
         });
 
         const trade = await newTrade.save();
@@ -51,35 +64,6 @@ router.post('/', auth, async (req, res) => {
         res.status(500).send('Server error');
     }
 });
-
-
-router.post('/trades', async (req, res) => {
-    try {
-        const { symbol, type, entryDate, exitDate, expirationDate, strikePrice, quantity, fillPrice, closePrice, fee, pl } = req.body;
-        
-        // Create a new trade
-        const newTrade = new Trade({
-            symbol,
-            type,
-            entryDate,
-            exitDate,
-            expirationDate,
-            strikePrice,
-            quantity,
-            fillPrice,
-            closePrice,
-            fee,
-            pl,
-        });
-        
-        const trade = await newTrade.save();
-        res.json(trade);
-    } catch (err) {
-        console.error(err.message); // Log the error to the console
-        res.status(500).send('Server Error'); // Respond with a 500 status code and a message
-    }
-});
-
 
 // Get all trades for a user
 router.get('/', auth, async (req, res) => {
@@ -91,5 +75,36 @@ router.get('/', auth, async (req, res) => {
         res.status(500).send('Server error');
     }
 });
+
+// DELETE a trade by ID
+router.delete('/:id', auth, async (req, res) => {
+    try {
+        const trade = await Trade.findById(req.params.id);
+
+        if (!trade) {
+            return res.status(404).json({ msg: 'Trade not found' });
+        }
+
+        // Make sure the user owns the trade
+        if (trade.user.toString() !== req.user.id) {
+            return res.status(401).json({ msg: 'User not authorized' });
+        }
+
+        await Trade.findByIdAndDelete(req.params.id);
+
+        res.json({ msg: 'Trade removed' });
+    } catch (err) {
+        console.error('Error occurred:', err.message);
+
+        // Check if the error is related to ObjectId casting
+        if (err.kind === 'ObjectId') {
+            return res.status(404).json({ msg: 'Trade not found' });
+        }
+
+        res.status(500).json({ msg: 'Server error', error: err.message });
+    }
+});
+
+
 
 module.exports = router;
