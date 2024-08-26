@@ -17,9 +17,6 @@
 .env.development.local
 .env.test.local
 .env.production.local
-/trading_journal_backend/.env
-/trading_journal_backend/node_modules
-/trading_journal_frontend/node_modules
 
 npm-debug.log*
 yarn-debug.log*
