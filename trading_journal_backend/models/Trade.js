@@ -1,30 +1,54 @@
 const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
 
-const TradeSchema = new mongoose.Schema({
+const TradeSchema = new Schema({
     user: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
+        type: Schema.Types.ObjectId,
+        ref: 'User'
     },
     symbol: {
         type: String,
-        required: true,
+        required: true
     },
     type: {
         type: String,
-        required: true,  // "stock" or "option"
+        required: true,
+        enum: ['stock', 'option'] 
+    },
+    entryDate: {
+        type: Date,
+        required: true
+    },
+    exitDate: {
+        type: Date,
+        required: true
+    },
+    expirationDate: {
+        type: Date, // Required only for options
+    },
+    strikePrice: {
+        type: Number, // Required only for options
     },
     quantity: {
         type: Number,
-        required: true,
+        required: true
     },
-    price: {
+    fillPrice: {
         type: Number,
-        required: true,
+        required: true
     },
-    date: {
-        type: Date,
-        default: Date.now,
+    closePrice: {
+        type: Number,
+        required: true
     },
+    fee: {
+        type: Number,
+        required: true
+    },
+    pl: {
+        type: Number,
+        required: true
+    }
 });
 
 module.exports = mongoose.model('Trade', TradeSchema);
